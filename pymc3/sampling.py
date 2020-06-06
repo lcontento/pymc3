@@ -1867,7 +1867,7 @@ def sample_prior_predictive(
 
 
 def init_nuts(
-    init="auto", chains=1, n_init=500000, model=None, random_seed=None, progressbar=True, **kwargs
+    init="auto", chains=1, n_init=500000, model=None, random_seed=None, progressbar=True, adaptation_window=101, **kwargs
 ):
     """Set up the mass matrix initialization for NUTS.
 
@@ -1949,7 +1949,7 @@ def init_nuts(
         start = [model.test_point] * chains
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
-        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
+        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10, adaptation_window=adaptation_window)
     elif init == "jitter+adapt_diag":
         start = []
         for _ in range(chains):
@@ -1959,7 +1959,7 @@ def init_nuts(
             start.append(mean)
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         var = np.ones_like(mean)
-        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10)
+        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, var, 10, adaptation_window=adaptation_window)
     elif init == "advi+adapt_diag_grad":
         approx = pm.fit(
             random_seed=random_seed,
@@ -1977,7 +1977,7 @@ def init_nuts(
         mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
-        potential = quadpotential.QuadPotentialDiagAdaptGrad(model.ndim, mean, cov, weight)
+        potential = quadpotential.QuadPotentialDiagAdaptGrad(model.ndim, mean, cov, weight, adaptation_window=adaptation_window)
     elif init == "advi+adapt_diag":
         approx = pm.fit(
             random_seed=random_seed,
@@ -1995,7 +1995,7 @@ def init_nuts(
         mean = approx.bij.rmap(approx.mean.get_value())
         mean = model.dict_to_array(mean)
         weight = 50
-        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, cov, weight)
+        potential = quadpotential.QuadPotentialDiagAdapt(model.ndim, mean, cov, weight, adaptation_window=adaptation_window)
     elif init == "advi":
         approx = pm.fit(
             random_seed=random_seed,
@@ -2036,7 +2036,7 @@ def init_nuts(
         start = [model.test_point] * chains
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         cov = np.eye(model.ndim)
-        potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
+        potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10, adaptation_window=adaptation_window)
     elif init == 'jitter+adapt_full':
         start = []
         for _ in range(chains):
@@ -2046,7 +2046,7 @@ def init_nuts(
             start.append(mean)
         mean = np.mean([model.dict_to_array(vals) for vals in start], axis=0)
         cov = np.eye(model.ndim)
-        potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10)
+        potential = quadpotential.QuadPotentialFullAdapt(model.ndim, mean, cov, 10, adaptation_window=adaptation_window)
     else:
         raise ValueError("Unknown initializer: {}.".format(init))
 
