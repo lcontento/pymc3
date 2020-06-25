@@ -158,17 +158,28 @@ class HDF5(base.BaseTrace):
         """
         self.chain = chain
         with self.activate_file:
-            for varname, shape in self.var_shapes.items():
-                if varname not in self.samples:
-                    self.samples.create_dataset(name=varname, shape=(draws, ) + shape,
-                                                dtype=self.var_dtypes[varname],
-                                                maxshape=(None, ) + shape)
-            self.draw_idx = len(self)
-            self.draws = self.draw_idx + draws
+            if len(self.samples) == 0:
+                # Empty chain
+                for varname, shape in self.var_shapes.items():
+                    if varname not in self.samples:
+                        self.samples.create_dataset(name=varname, shape=(draws, ) + shape,
+                                                    dtype=self.var_dtypes[varname],
+                                                    maxshape=(None, ) + shape)
+                self.draw_idx = 0
+                self.draws = draws
+
+            else:
+                # A chain is already present
+                if set(self.samples.keys()) != set(self.varnames):
+                    raise ValueError(
+                        "Recorded vars can't change, names incompatible: "
+                        "pre-existing: {}, requested: {}".format(set(self.samples.keys()), set(self.varnames)))
+                self.draw_idx = len(next(iter(self.samples.values())))
+                self.draws = self.draw_idx + draws
+
             self._set_sampler_vars(sampler_vars)
             self._is_base_setup = True
             self._resize(self.draws)
-
 
     def close(self):
         with self.activate_file:
@@ -206,7 +217,17 @@ class HDF5(base.BaseTrace):
             sliced.chain = self.chain
             sliced.samples = {v: self.samples[v][start:stop:step]
                               for v in self.varnames}
+            sliced.sampler_vars = self.sampler_vars
             sliced.draw_idx = (stop - start) // step
+
+            if self.records_stats:
+                sliced._stats = []
+                for vars in self.stats.values():
+                    var_sliced = {}
+                    sliced._stats.append(var_sliced)
+                    for key, vals in vars.items():
+                        var_sliced[key] = vals[start:stop:step]
+
             return sliced
 
     def point(self, idx):
