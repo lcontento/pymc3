@@ -128,7 +128,7 @@ def instantiate_steppers(model, steps, selected_steps, step_kwargs=None):
             continue
         args = step_kwargs.get(step_class.name, {})
         used_keys.add(step_class.name)
-        step = step_class(vars=vars, **args)
+        step = step_class(vars=vars, model=model, **args)
         steps.append(step)
 
     unused_args = set(step_kwargs).difference(used_keys)
@@ -963,7 +963,7 @@ def _iter_sample(
                 strace.record(point)
             if callback is not None:
                 warns = getattr(step, "warnings", None)
-                callback(trace=strace, draw=Draw(chain, i == draws, i, i < tune, stats, point, warns))
+                callback(trace=strace, draw=Draw(chain, i == draws-1, i, i < tune, stats, point, warns))
 
             yield strace, diverging
     except KeyboardInterrupt:
